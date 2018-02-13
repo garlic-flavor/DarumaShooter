@@ -9,15 +9,18 @@ var infoWindow;
 
 var marker;
 var sunriseMarker;
+var sunriseDaruMarker;
 var sunsetMarker;
+var sunsetDaruMarker;
 
 var sunrisePath;
 var sunsetPath;
 
 var EARTH_R = 6371000.0;    // 地球の半径(単位:m)
 var EYE_HEIGHT = 1.7;       // 目の高さ(単位:m)
-var MAX_DISTANCE = 160000;  // MAX_DISTANCEまで標高を調べる。(単位:m)
+var MAX_DISTANCE = 200000;  // MAX_DISTANCEまで標高を調べる。(単位:m)
 var DENSITY = 2000;         // DENSITY毎に標高を調べる。(単位:m)
+var DARUMA_DISTANCE = EARTH_R * Math.acos(EARTH_R / (EYE_HEIGHT + EARTH_R));
 
 
 //------------------------------------------------------------------------------
@@ -47,14 +50,16 @@ function calcHeightInSight(from, to, height) {
 }
 
 // 山の上に太陽がくるかどうか。
-function calcHolizontalSun(els) {
+function calcHolizontalSun(els, start, delta) {
     var maxpoint = null;
     for (var i = 1; i < els.length; ++i) {
+        var p = start + delta * i;
+
         var h = calcHeightInSight(
-            els[0].location, els[i].location, els[i].elevation);
+            els[start].location, els[p].location, els[p].elevation);
 
         if (!maxpoint || maxpoint.height < h) {
-            maxpoint = { height: h, location: els[i].location };
+            maxpoint = { height: h, location: els[p].location };
         }
     }
     return maxpoint;
@@ -80,12 +85,11 @@ function makePath(from, heading, distance, density) {
 
 
 // google.maps.ElevationService を利用し、path に沿って標高を得る。
-function queryElevation(path, callback){
+function queryElevation(path, samples, callback){
     if (!elevator) {
         elevator = new google.maps.ElevationService();
     }
-    elevator.getElevationAlongPath(
-        {path: path, samples: Math.floor(MAX_DISTANCE/DENSITY)}, callback);
+    elevator.getElevationAlongPath({path: path, samples: samples}, callback);
 }
 
 // 地図上に線を引く
@@ -140,56 +144,82 @@ function setMarkerPos(map, marker, latlng, draggable = false,
 }
 
 //------------------------------------------------------------------------------
-// 朝日達磨の更新
-function updateSunriseDaruma(map, latlng, sunInfo) {
-    var path = makePath(latlng, sunInfo.sunriseAzimuth,
-                        MAX_DISTANCE, DENSITY);
+// 達磨情報の更新
+function updateDaruma(map, latlng, sunInfo) {
+    var path = new Array(3);
 
-    // 赤線を引く
-    sunrisePath = drawLine(map, sunrisePath, path, "#FF0000", 2);
+    // 日没地点
+    path[0] = google.maps.geometry.spherical.computeOffset(
+        latlng, MAX_DISTANCE, sunInfo.sunsetAzimuth);
+    // 現在地
+    path[1] = latlng;
+    // 日の出地点
+    path[2] = google.maps.geometry.spherical.computeOffset(
+        latlng, MAX_DISTANCE, sunInfo.sunriseAzimuth);
 
-    // 標高の取得
-    queryElevation(path, function(elevations, status){
-        if (status !== "OK") {
-            window.alert("A querying of elevations failed.");
+    // 緑線
+    sunsetPath = drawLine(map, sunsetPath, path.slice(0, 2), "#00FF00", 2);
+    // 赤線
+    sunrisePath = drawLine(map, sunrisePath, path.slice(-2), "#FF0000", 2);
+
+    var samples = Math.floor(MAX_DISTANCE / DENSITY) * 2 + 1;
+
+    // 標高問い合わせ
+    queryElevation(path, samples, function(elevations, status) {
+        if (status != "OK") {
+            window.alert("標高の取得に失敗しました。");
             return;
         }
 
-        var maxpoint = calcHolizontalSun(elevations);
+        var center = Math.floor(MAX_DISTANCE / DENSITY);
 
+        var maxpoint = calcHolizontalSun(
+            elevations.slice(0, center+1), center, -1);
+
+        // 日の入り
         if (maxpoint && 0 < maxpoint.height) {
-            sunriseMarker = setMarkerPos(map, sunriseMarker,
-                                         maxpoint.location, false);
-        } else if (sunriseMarker) {
-            sunriseMarker.setVisible(false);
+            sunsetMarker = setMarkerPos(
+                map, sunsetMarker, maxpoint.location, false, function(m){
+                    m.setIcon("./img/nondarumapin.svg");
+                });
+            if (sunsetDaruMarker) {
+                sunsetDaruMarker.setVisible(false);
+            }
+        } else {
+            var sunsetDaruPos = google.maps.geometry.spherical.computeOffset(
+                latlng, DARUMA_DISTANCE, sunInfo.sunsetAzimuth);
+            sunsetDaruMarker = setMarkerPos(
+                map, sunsetDaruMarker, sunsetDaruPos, false, function(m){
+                    m.setIcon("./img/darumapin.svg");
+                });
+
+            if (sunsetMarker) {
+                sunsetMarker.setVisible(false);
+            }
         }
 
-    });
-}
-
-//------------------------------------------------------------------------------
-// 夕日達磨の更新
-function updateSunsetDaruma(map, latlng, sunInfo) {
-    var path = makePath(latlng, sunInfo.sunsetAzimuth,
-                        MAX_DISTANCE, DENSITY);
-
-    // 緑線を引く
-    sunsetPath = drawLine(map, sunsetPath, path, "#00FF00", 2);
-
-    // 標高の取得
-    queryElevation(path, function(elevations, status){
-        if (status !== "OK") {
-            window.alert("A querying of elevations failed.");
-            return;
-        }
-
-        var maxpoint = calcHolizontalSun(elevations);
-
+        // 日の出
+        maxpoint = calcHolizontalSun(elevations.slice(-center-1), 0, 1);
         if (maxpoint && 0 < maxpoint.height) {
-            sunsetMarker = setMarkerPos(map, sunsetMarker,
-                                        maxpoint.location, false);
-        } else if (sunsetMarker) {
-            sunsetMarker.setVisible(false);
+            sunriseMarker = setMarkerPos(
+                map, sunriseMarker, maxpoint.location, false, function(m){
+                    m.setIcon("./img/nondarumapin.svg");
+                });
+            if (sunriseDaruMarker) {
+                sunriseDaruMarker.setVisible(false);
+            }
+        } else {
+
+            var sunriseDaruPos = google.maps.geometry.spherical.computeOffset(
+                latlng, DARUMA_DISTANCE, sunInfo.sunriseAzimuth);
+            sunriseDaruMarker = setMarkerPos(
+                map, sunriseDaruMarker, sunriseDaruPos, false, function(m){
+                    m.setIcon("./img/darumapin.svg");
+                });
+
+            if (sunriseMarker) {
+                sunriseMarker.setVisible(false);
+            }
         }
     });
 }
@@ -219,8 +249,7 @@ function updateMarker(map, latlng, dragend){
 
     openInfoWindow(map, marker, infoString);
 
-    updateSunriseDaruma(map, latlng, sunInfo);
-    updateSunsetDaruma(map, latlng, sunInfo);
+    updateDaruma(map, latlng, sunInfo);
 }
 
 //------------------------------------------------------------------------------
@@ -229,18 +258,26 @@ function menuOnClick() {
     $m = $("#map");
     $sp = $("#settingPain");
 
-    $sp.css({
-        display: "block",
-    });
+    if ($sp.css("display") == "none")
+    {
+        $sp.css({
+            display: "block",
+        });
 
-    var off = $sp.offset();
-    w = Math.floor(($m.innerWidth() - off.left) * 0.9);
-    h = Math.floor(($m.innerHeight() - off.top) * 0.9);
+        var off = $sp.offset();
+        w = Math.floor(($m.innerWidth() - off.left) * 0.9);
+        h = Math.floor(($m.innerHeight() - off.top) * 0.9);
 
-    $sp.css({
-        width: w,
-        height: h,
-    });
+        $sp.css({
+            width: w,
+            height: h,
+        });
+    } else {
+        $sp.css("display", "none");
+        if (marker){
+            updateMarker(map, marker.getPosition(), true);
+        }
+    }
 }
 
 function getSelectedDate(){
@@ -252,7 +289,7 @@ function getSelectedDate(){
 function initUI($div, map) {
     //
     var $menuButton = $("<button>");
-    $menuButton.html("設定");
+    $menuButton.html("<img src='./img/gear.png' alt='Setting'/>");
     $menuButton.click(menuOnClick);
     $div.append($menuButton);
 
@@ -264,17 +301,6 @@ function initUI($div, map) {
         "background-color": "white",
     });
     $settingPain.prop("id", "settingPain");
-
-    // 閉じるボタン
-    {
-        var $closeButton = $("<button>");
-        $closeButton.click(function(){
-            $("#settingPain").css("display", "none");
-            updateMarker(map, marker.getPosition(), true);
-        });
-        $closeButton.html("閉じる");
-        $settingPain.append($closeButton);
-    }
 
     // 日付選択
     {
@@ -290,9 +316,27 @@ function initUI($div, map) {
         });
         $dateSel.datepicker();
 
-        $dateOuter.append($("<span>日付</span>"));
+        $dateOuter.append($("<span>Date: </span>"));
         $dateOuter.append($dateSel);
         $settingPain.append($dateOuter);
+    }
+
+    // 謝辞
+    {
+        var $Acknowledgement = $("<p>");
+        $Acknowledgement.html("<b>Acknowledgements:</b><br>" +
+                              "<b>This module depends on belows.</b><br>" +
+                              "<a href='https://developers.google.com/maps/'>Google Maps API(https://developers.google.com/maps/)</a> to display map.<br>" +
+                              "<a href='https://github.com/mourner/suncalc'>SunCalc(https://github.com/mourner/suncalc)</a> to calculate sun informations.<br>" +
+                              "<a href='https://jquery.com/'>JQuery(https://jquery.com/)</a> to handle DOM.<br>" +
+                              "<a href='http://jqueryui.com/'>JQueryUI(http://jqueryui.com/)</a> to display calender.<br>" +
+                              "<a href='https://developers.google.com/speed/libraries/'>Google Hosted Libraries</a> to load JQuery and JQueryUI.<br>" +
+                              "<br><br>" +
+                              "written by KUMA, some rights reserved.<br>" +
+                              "licensed under CC0."
+                             );
+
+        $settingPain.append($Acknowledgement);
     }
 
     $div.append($settingPain);
@@ -314,7 +358,16 @@ function init() {
 
     // クリックイベント
     google.maps.event.addListener(map, 'click', function(event){
-        updateMarker(map, event.latLng);
+        $sp = $("#settingPain");
+
+        if ($sp.css("display") == "none") {
+            updateMarker(map, event.latLng);
+        } else {
+            $sp.css("display", "none");
+            if (marker) {
+                updateMarker(map, marker.getPosition(), true);
+            }
+        }
     });
 
 }

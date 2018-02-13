@@ -1,9 +1,20 @@
 # Daruma Shooter ver 0.0001
 
-## !!! UNDER CONSTRUCTION !!!
+## Acknowledgements
+__This module depends on belows.__
+- Google Maps API(https://developers.google.com/maps/) to display map.
+- SunCalc(https://github.com/mourner/suncalc) to calculate sun informations.
+- JQuery(https://jquery.com/) to handle DOM.
+- JQueryUI(http://jqueryui.com/) to display calender.
+- Google Hosted Libraries to load JQuery and JQueryUI.
 
-## THANKS
-http://suncalc.net/
-http://maps.google.com/
+## Description
+Test that whether can you see 'Daruma Sunrise/set' at the specified location and day.
 
-https://www.esrl.noaa.gov/gmd/grad/solcalc/
+## License
+written by KUMA, some rights reserved.
+licensed under CC0.
+
+
+## History
+- 2018/02/13 first release.
