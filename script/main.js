@@ -98,6 +98,7 @@ function drawLine(map, line, path, color, weight) {
             strokeColor: color,
             strokeOpacity: 1.0,
             strokeWeight: weight,
+            clickable: false,
             map: map,
         });
     } else {
