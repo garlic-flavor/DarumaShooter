@@ -1,6 +1,6 @@
-# Daruma Shooter
+# Daruma Shooter ver 0.0001
 
-## UNDER CONSTRUCTION.
+## !!! UNDER CONSTRUCTION !!!
 
 ## THANKS
 http://suncalc.net/
