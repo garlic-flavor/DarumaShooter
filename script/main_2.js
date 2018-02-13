@@ -307,8 +307,6 @@ function init() {
         zoom: 8
     });
 
-    window.alert("reach2: " + $("#map").length);
-
     // 設定ボタン
     var $ui = initUI($("<div>"), map);
     map.controls[google.maps.ControlPosition.TOP_LEFT].push($ui[0]);
@@ -319,5 +317,5 @@ function init() {
     });
 
 }
-// Google Map 準備完了時に呼ばれる。
-function readyMap() { window.alert("reach1"); $(init);}
+//
+$(init);
