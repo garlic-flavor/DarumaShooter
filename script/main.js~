@@ -1,0 +1,6 @@
+// jQuery required.
+
+function init() {
+}
+
+function initMap() {$(init);}
