@@ -20,7 +20,20 @@
 
   </head>
   <body>
-    <div id="map"></div>
+    <div id="prenotice">
+      <h1>please turn on ECMAScript.</h1>
+      This module uses Google Map API to show map.<br />
+      And calculate sunrise/set position at specified place and day.<br />
+    </div>
+
+    <div style="display:none;" id="how_to_use">
+      <button onclick="howToUseOnClick(3);">close</button><br/>
+      <img alt="1.Tap anywhere on the map." src="./img/how_to_use_01.jpg" onclick="howToUseOnClick(1);" />
+      <img alt="2.Then, lines apear on the map. these lines indicate the azimuth of sunrise or sunset." src="./img/how_to_use_02.jpg" onclick="howToUseOnClick(2);" />
+      <img alt="3.Tap gear faced button to open setting window." src="./img/how_to_use_03.jpg" onclick="howToUseOnClick(3);" />
+    </div>
+
+    <div style="display:none;" id="map"></div>
 
     <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAkZ6TZBfc6DuPkvP3kQX5qVKIK04C7oh4&libraries=geometry&callback=readyMap" async defer></script>
 

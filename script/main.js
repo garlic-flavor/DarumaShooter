@@ -50,7 +50,7 @@ function calcHeightInSight(from, to, height) {
 }
 
 // 山の上に太陽がくるかどうか。
-function calcHolizontalSun(els, heading, start, delta) {
+function calcHorizontalSun(els, heading, start, delta) {
     var eyeHeight = els[start].elevation + EYE_HEIGHT;
     var darumaDistance = EARTH_R * Math.acos(EARTH_R / (eyeHeight + EARTH_R));
     var darumaPos = google.maps.geometry.spherical.computeOffset(
@@ -187,7 +187,7 @@ function updateDaruma(map, latlng, sunInfo) {
 
         var center = Math.floor(MAX_DISTANCE / DENSITY);
 
-        var darumaInfo = calcHolizontalSun(
+        var darumaInfo = calcHorizontalSun(
             elevations.slice(0, center+1), sunInfo.sunsetAzimuth, center, -1);
 
         // 日の入り
@@ -210,7 +210,7 @@ function updateDaruma(map, latlng, sunInfo) {
         }
 
         // 日の出
-        darumaInfo = calcHolizontalSun(
+        darumaInfo = calcHorizontalSun(
             elevations.slice(-center-1), sunInfo.sunriseAzimuth, 0, 1);
 
         if (darumaInfo.daruma) { // 達磨が見える
@@ -333,8 +333,8 @@ function initUI($div, map) {
     // 謝辞
     {
         var $Acknowledgement = $("<p>");
-        $Acknowledgement.html("DarumaShooter v0.0002(02/14/2018)<br>" +
-                              // "<a href='./doc/how_to_use.html'>How to use.</a><br><br>" +
+        $Acknowledgement.html("DarumaShooter v0.0003(02/15/2018)<br>" +
+                              "<button onclick='howToUseOnClick(0);'>How to use.</button><br><br>" +
                               "<b>Acknowledgements:</b><br>" +
                               "<b>This module depends on belows.</b><br>" +
                               "<a href='https://developers.google.com/maps/'>Google Maps API(https://developers.google.com/maps/)</a> to display map.<br>" +
@@ -354,9 +354,32 @@ function initUI($div, map) {
     return $div;
 }
 
+//------------------------------------------------------------------------------
+function howToUseOnClick(next) {
+    $imgs = $("#how_to_use img");
+    $imgs.hide();
+
+    if (next < $imgs.length) {
+        $($imgs[next]).show();
+        $("#how_to_use").show();
+        $("#map").hide();
+    } else {
+        $("#how_to_use").hide();
+        $("#map").show();
+    }
+}
+
 
 //------------------------------------------------------------------------------
 function init() {
+    $("#prenotice").hide();
+    if (window.localStorage.getItem("I_know_how_to_use")) {
+        $("#map").show();
+    } else {
+        howToUseOnClick(0);
+        window.localStorage.setItem("I_know_how_to_use", true);
+    }
+
     // 地図
     map = new google.maps.Map($("#map")[0], {
         center: {lat: 34.6431, lng:134.9972},

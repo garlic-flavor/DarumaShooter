@@ -1,4 +1,4 @@
-# Daruma Shooter ver 0.0002
+# Daruma Shooter ver 0.0003
 
 ## Acknowledgements
 __This module depends on belows.__
@@ -17,5 +17,6 @@ licensed under CC0.
 
 
 ## History
+- 2018/02/15 add 'how to use'.
 - 2018/02/14 fix an equation.
 - 2018/02/13 first release.
